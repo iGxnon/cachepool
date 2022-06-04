@@ -1,14 +1,12 @@
-package cachepool
+# cachepool
 
-import (
-	"database/sql"
-	"fmt"
-	"github.com/igxnon/cachepool/cache"
-	"github.com/igxnon/cachepool/helper"
-	"github.com/streadway/amqp"
-	"time"
-)
++ Require: golang 1.18 or above
 
+### Usage:
+
+1. cachepool
+
+```go
 func ExampleCachePool() {
 	pool := NewDefault(nil)
 	// Set
@@ -53,6 +51,21 @@ func ExampleCachePool() {
 	pool.StopMQ()
 }
 
+```
+
+2. cache helper
+
+```go
+/*
+------------------------
+yee	| bar	 | foo
+------------------------
+Hello   |  1     | null
+------------------------
+Hi	|  2     | NOW()
+------------------------
+*/
+
 type FooBar struct {
 	Bar int64
 	Yee string
@@ -90,3 +103,5 @@ func ExampleHelper() {
 	}
 	fmt.Println(gotOnesNullable)
 }
+
+```
