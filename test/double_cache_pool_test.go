@@ -22,7 +22,10 @@ func (b *Bar) Unmarshal(bs []byte) bool {
 }
 
 func TestDoubleCachePool(t *testing.T) {
-	conn, _ := redis.Dial("tcp", "127.0.0.1:6379")
+	conn, err := redis.Dial("tcp", "127.0.0.1:6379")
+	if err != nil {
+		t.Error("redis does not connect")
+	}
 
 	pool := cachepool.NewDouble(
 		cachepool.WithBuidinGlobalCache(time.Minute*30, conn),
@@ -41,14 +44,22 @@ func TestDoubleCachePool(t *testing.T) {
 	}
 }
 
-func BenchmarkDoubleCachePool(b *testing.B) {
+func BenchmarkDoubleCachePoolGet(b *testing.B) {
+	benchmarkDoubleCachePoolGet(b, cache.NewCache(time.Minute*5, time.Minute*10))
+}
+
+func BenchmarkDoubleSyncMapCachePoolGet(b *testing.B) {
+	benchmarkDoubleCachePoolGet(b, cache.NewSyncMapCache(time.Minute*5, time.Minute*10))
+}
+
+func benchmarkDoubleCachePoolGet(b *testing.B, c cache.ICache) {
 	b.StopTimer()
 
 	conn, _ := redis.Dial("tcp", "127.0.0.1:6379")
 
 	pool := cachepool.NewDouble(
 		cachepool.WithBuidinGlobalCache(time.Minute*30, conn),
-		cachepool.WithCache(cache.NewCache(time.Minute*5, time.Minute*10)))
+		cachepool.WithCache(c))
 
 	pool.SetDefault("foo", &Bar{foo: "yee"})
 	bytes, ok := pool.Get("foo")

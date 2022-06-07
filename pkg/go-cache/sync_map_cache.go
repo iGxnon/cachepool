@@ -231,10 +231,6 @@ func (s *syncMapCache) Flush() {
 	s.items = &sync.Map{}
 }
 
-func (c *syncMapCache) setJanitor(j *janitor) {
-	c.janitor = j
-}
-
 func newSyncMapCache(de time.Duration) *syncMapCache {
 	if de == 0 {
 		de = -1
@@ -255,6 +251,10 @@ func runSyncMapJanitor(c *syncMapCache, ci time.Duration) {
 	go j.Run(c)
 }
 
+func stopSyncMapJanitor(c *SyncMapCache) {
+	c.janitor.stop <- true
+}
+
 func newSyncMapCacheWithJanitor(de time.Duration, ci time.Duration) *SyncMapCache {
 	c := newSyncMapCache(de)
 	// This trick ensures that the janitor goroutine (which--granted it
@@ -265,7 +265,7 @@ func newSyncMapCacheWithJanitor(de time.Duration, ci time.Duration) *SyncMapCach
 	C := &SyncMapCache{c}
 	if ci > 0 {
 		runSyncMapJanitor(c, ci)
-		runtime.SetFinalizer(C, stopJanitor)
+		runtime.SetFinalizer(C, stopSyncMapJanitor)
 	}
 	return C
 }

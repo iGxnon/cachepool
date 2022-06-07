@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/igxnon/cachepool"
 	"github.com/igxnon/cachepool/helper"
+	"github.com/igxnon/cachepool/pkg/go-cache"
 	"github.com/streadway/amqp"
+	"sync"
 	"testing"
 	"time"
 )
@@ -84,4 +86,67 @@ func TestMQInManyPool(t *testing.T) {
 	p1.StopMQ()
 	p2.StopMQ()
 	p3.StopMQ()
+}
+
+func BenchmarkCachePoolGet(b *testing.B) {
+	b.StopTimer()
+	pool := cachepool.New(cachepool.WithCache(cache.NewCache(time.Minute*5, time.Minute*30)))
+	pool.SetDefault("foo", "bar")
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		pool.Get("foo")
+	}
+}
+
+func BenchmarkSyncMapCachePoolGet(b *testing.B) {
+	b.StopTimer()
+	pool := cachepool.New(
+		cachepool.WithCache(cache.NewSyncMapCache(time.Minute*5, time.Minute*30)))
+	pool.SetDefault("foo", "bar")
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		pool.Get("foo")
+	}
+}
+
+func BenchmarkCachePoolParallelGet(b *testing.B) {
+	b.StopTimer()
+	pool := cachepool.New(
+		cachepool.WithCache(cache.NewCache(time.Minute*5, time.Minute*30)))
+	pool.SetDefault("foo", "bar")
+	n := 100
+	each := b.N / n
+	wg := new(sync.WaitGroup)
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			for j := 0; j < each; j++ {
+				pool.Get("foo")
+			}
+			wg.Done()
+		}()
+	}
+	b.StartTimer()
+	wg.Wait()
+}
+
+func BenchmarkSyncMapCachePoolParallelGet(b *testing.B) {
+	b.StopTimer()
+	pool := cachepool.New(
+		cachepool.WithCache(cache.NewSyncMapCache(time.Minute*5, time.Minute*30)))
+	pool.SetDefault("foo", "bar")
+	n := 100
+	each := b.N / n
+	wg := new(sync.WaitGroup)
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			for j := 0; j < each; j++ {
+				pool.Get("foo")
+			}
+			wg.Done()
+		}()
+	}
+	b.StartTimer()
+	wg.Wait()
 }
