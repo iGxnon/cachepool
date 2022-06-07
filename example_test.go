@@ -1,43 +1,44 @@
 package cachepool
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	"github.com/igxnon/cachepool/cache"
 	"github.com/igxnon/cachepool/helper"
+	"github.com/igxnon/cachepool/pkg/go-cache"
 	"github.com/streadway/amqp"
 	"time"
 )
 
 func ExampleCachePool() {
-	pool := NewDefault(nil)
+	pool := New()
 	// Set
-	pool.Cache.Set("foo", "bar", time.Minute*40)
-	err := pool.Cache.Add("foo2", "bar2", cache.DefaultExpiration)
+	pool.Set("foo", "bar", time.Minute*40)
+	err := pool.Add("foo2", "bar2", cache.DefaultExpiration)
 	if err != nil {
 		// foo2 contains before
 	}
-	err = pool.Cache.Replace("foo", "barbar", cache.NoExpiration)
+	err = pool.Replace("foo", "barbar", cache.NoExpiration)
 	if err != nil {
 		// foo does not contain before
 	}
 	// Get
-	_, _ = pool.Cache.Get("foo")
-	_, _, _ = pool.Cache.GetWithExpiration("foo2")
+	_, _ = pool.Get("foo")
+	_, _, _ = pool.GetWithExpiration("foo2")
 
 	// increment and decrement
-	pool.Cache.Set("foo3", 114514, cache.NoExpiration)
+	pool.Set("foo3", 114514, cache.NoExpiration)
 
-	_ = pool.Cache.Increment("foo3", 1919810) // then foo3 equals 2034324
-	_ = pool.Cache.Decrement("foo3", 1919810)
+	_ = pool.Increment("foo3", 1919810) // then foo3 equals 2034324
+	_ = pool.Decrement("foo3", 1919810)
 
 	// use message queue, sync some cache
 	conn, _ := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	ch, _ := conn.Channel()
-	pool.UseMQ(ch, "cache1")
+	pool.UseMQ(context.Background(), ch, "cache1")
 
 	// publish an importance message into cache (
-	_ = cache.Publish(ch, "下北沢一番臭の伝説", struct {
+	_ = helper.Publish(ch, "下北沢一番臭の伝説", struct {
 		Age    int
 		Prefix string
 		Movie  string
@@ -65,7 +66,7 @@ func ExampleHelper() {
 	if err != nil {
 		return
 	}
-	pool := NewDefault(db)
+	pool := New(WithDatabase(db))
 	got, err := helper.QueryRow[FooBar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		return

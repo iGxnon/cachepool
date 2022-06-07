@@ -36,7 +36,7 @@ func TestQuery(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	pool := cachepool.NewDefault(db)
+	pool := cachepool.New(cachepool.WithDatabase(db))
 	got, err := QueryRow[FooBar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		t.Error(err)
@@ -73,7 +73,7 @@ func TestBadQuery(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	pool := cachepool.NewDefault(db)
+	pool := cachepool.New(cachepool.WithDatabase(db))
 	got, err := QueryRow[BadFooBar](pool, "SELECT * FROM t WHERE bar = ? LIMIT 1", 1)
 	if err == nil {
 		t.Error("opps")
@@ -94,7 +94,7 @@ func BenchmarkQueryWithCache(b *testing.B) {
 		out     map[string]any
 		dsn     = "root:12345678@tcp(127.0.0.1:3306)/awesome?charset=utf8mb4"
 		db, err = sql.Open("mysql", dsn)
-		pool    = cachepool.NewDefault(db)
+		pool    = cachepool.New(cachepool.WithDatabase(db))
 	)
 
 	if err != nil {

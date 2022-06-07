@@ -1,5 +1,4 @@
-// Package sqlparser  用于解析 SQL 构建缓存定位标识符
-package sqlparser
+package internal
 
 import (
 	"fmt"

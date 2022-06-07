@@ -3,46 +3,58 @@ package cachepool
 import (
 	"context"
 	"database/sql"
-	"github.com/igxnon/cachepool/cache"
+	"github.com/igxnon/cachepool/pkg/go-cache"
 	"github.com/streadway/amqp"
-	"time"
 	_ "unsafe"
 )
 
+type ICachePool interface {
+	cache.ICache
+
+	GetDatabase() *sql.DB
+}
+
 type CachePool struct {
-	Cache    *cache.Cache
-	Db       *sql.DB
+	cache.ICache
+	db       *sql.DB
 	cancelMQ context.CancelFunc
 }
 
-// UseMQ 使用 rabbitmq 同步一些缓存
-func (c *CachePool) UseMQ(ch *amqp.Channel, name string) {
-	ctx, cancel := context.WithCancel(context.Background())
-	c.cancelMQ = cancel
-	go run_mq(ctx, c.Cache, ch, name)
+func (c *CachePool) GetDatabase() *sql.DB {
+	return c.db
 }
 
-// StopMQ 停用 rabbitmq
+// UseMQ uses rabbitmq to sync some cache between different machines.
+// It returns a channel, if err happened before run mq listener, the error
+// will be sent into the channel immediately. And after ctx done(StopMQ())
+// or mq closed, nil will be sent into the channel.
+// name passed to it must be a unique id among all machines
+// it is useless for global cache such as NoSQL based cache
+func (c *CachePool) UseMQ(ctx context.Context, ch *amqp.Channel, name string) <-chan error {
+	ctx, cancel := context.WithCancel(ctx)
+	c.cancelMQ = cancel
+	cha := make(chan error)
+	go func() {
+		cha <- run_mq(ctx, c, ch, name)
+	}()
+	return cha
+}
+
+// StopMQ stop using message queue
 func (c *CachePool) StopMQ() {
 	if c.cancelMQ != nil {
 		c.cancelMQ()
 	}
 }
 
-//go:linkname run_mq douyin-common/cachepool/cache.runSyncFromMQ
+//go:linkname run_mq github.com/igxnon/cachepool/helper.runSyncFromMQ
 //noinspection ALL
-func run_mq(context.Context, *cache.Cache, *amqp.Channel, string)
+func run_mq(ctx context.Context, cache cache.ICache, ch *amqp.Channel, name string) error
 
-func NewDefault(db *sql.DB) *CachePool {
+func New(opt ...Option) *CachePool {
+	opts := loadOptions(opt...)
 	return &CachePool{
-		Cache: cache.New(time.Minute*5, time.Hour/2, time.Minute*10),
-		Db:    db,
-	}
-}
-
-func New(db *sql.DB, cache *cache.Cache) *CachePool {
-	return &CachePool{
-		Cache: cache,
-		Db:    db,
+		ICache: opts.cache,
+		db:     opts.db,
 	}
 }

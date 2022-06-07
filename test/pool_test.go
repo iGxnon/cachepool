@@ -1,7 +1,9 @@
-package cachepool
+package test
 
 import (
-	"github.com/igxnon/cachepool/cache"
+	"context"
+	"github.com/igxnon/cachepool"
+	"github.com/igxnon/cachepool/helper"
 	"github.com/streadway/amqp"
 	"testing"
 	"time"
@@ -9,19 +11,19 @@ import (
 
 // Test sync with MQ
 func TestMQInOnePool(t *testing.T) {
-	pool := NewDefault(nil)
+	pool := cachepool.New()
 	// use message queue, sync some cache
 	conn, _ := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	ch, _ := conn.Channel()
-	pool.UseMQ(ch, "cache")
+	pool.UseMQ(context.Background(), ch, "cache")
 
 	// publish an importance message into cache (
-	_ = cache.Publish(ch, "下北沢一番臭の伝説", 114514, time.Minute*5)
+	_ = helper.Publish(ch, "下北沢一番臭の伝説", 114514, time.Minute*5)
 
 	// sleep for a second
 	time.Sleep(time.Second)
 
-	got, exp, ok := pool.Cache.GetWithExpiration("下北沢一番臭の伝説")
+	got, exp, ok := pool.GetWithExpiration("下北沢一番臭の伝説")
 	if ok {
 		t.Log(got, exp)
 	}
@@ -34,21 +36,21 @@ func TestMQInOnePool(t *testing.T) {
 
 func TestMQInManyPool(t *testing.T) {
 	var (
-		p1      = NewDefault(nil)
-		p2      = NewDefault(nil)
-		p3      = NewDefault(nil)
+		p1      = cachepool.New()
+		p2      = cachepool.New()
+		p3      = cachepool.New()
 		conn, _ = amqp.Dial("amqp://guest:guest@localhost:5672/")
 		ch1, _  = conn.Channel()
 		ch2, _  = conn.Channel()
 		ch3, _  = conn.Channel()
 	)
 
-	p1.UseMQ(ch1, "cache1")
-	p2.UseMQ(ch2, "cache2")
-	p3.UseMQ(ch3, "cache3")
+	p1.UseMQ(context.Background(), ch1, "cache1")
+	p2.UseMQ(context.Background(), ch2, "cache2")
+	p3.UseMQ(context.Background(), ch3, "cache3")
 
 	// publish an importance message into cache (
-	_ = cache.Publish(ch1, "下北沢一番臭の伝説", struct {
+	_ = helper.Publish(ch1, "下北沢一番臭の伝説", struct {
 		Age    int
 		Prefix string
 		Movie  string
@@ -61,17 +63,17 @@ func TestMQInManyPool(t *testing.T) {
 	// sleep for a second
 	time.Sleep(time.Second)
 
-	got, exp, ok := p1.Cache.GetWithExpiration("下北沢一番臭の伝説")
+	got, exp, ok := p1.GetWithExpiration("下北沢一番臭の伝説")
 	if ok {
 		t.Log(got, exp)
 	}
 
-	got, exp, ok = p2.Cache.GetWithExpiration("下北沢一番臭の伝説")
+	got, exp, ok = p2.GetWithExpiration("下北沢一番臭の伝説")
 	if ok {
 		t.Log(got, exp)
 	}
 
-	got, exp, ok = p3.Cache.GetWithExpiration("下北沢一番臭の伝説")
+	got, exp, ok = p3.GetWithExpiration("下北沢一番臭の伝説")
 	if ok {
 		t.Log(got, exp)
 	}

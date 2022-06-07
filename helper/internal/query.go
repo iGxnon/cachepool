@@ -1,4 +1,4 @@
-package helper
+package internal
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/igxnon/cachepool"
-	"github.com/igxnon/cachepool/sqlparser"
 	"reflect"
 	"time"
 	"unicode"
@@ -109,16 +108,16 @@ func checkElemType(typ reflect.Type) error {
 	}
 }
 
-func handleRows[S ~[]E, E any](
+func HandleRows[S ~[]E, E any](
 	ctx context.Context,
-	c *cachepool.CachePool,
+	c cachepool.ICachePool,
 	query string, args ...any,
 ) (s S, err error) {
 	var (
 		elem     = reflect.TypeOf((*E)(nil)).Elem()
 		typ      = reflect.TypeOf((*S)(nil)).Elem()
 		ok       bool
-		id       sqlparser.Identifier
+		id       Identifier
 		r        *sql.Rows
 		cols     []string
 		coltypes []*sql.ColumnType
@@ -129,7 +128,7 @@ func handleRows[S ~[]E, E any](
 		return
 	}
 
-	id, err = sqlparser.Parse(query, args...)
+	id, err = Parse(query, args...)
 	if err != nil {
 		err = errors.New("sql syntax fault")
 		return
@@ -142,7 +141,7 @@ func handleRows[S ~[]E, E any](
 
 	// missed, go to database to get
 
-	r, cols, coltypes, err = queryDb(c.Db, ctx, query, args...)
+	r, cols, coltypes, err = queryDb(c.GetDatabase(), ctx, query, args...)
 	if err != nil {
 		return
 	}
@@ -164,21 +163,21 @@ func handleRows[S ~[]E, E any](
 	return
 }
 
-func handleRow[E any](
+func HandleRow[E any](
 	ctx context.Context,
-	c *cachepool.CachePool,
+	c cachepool.ICachePool,
 	query string, args ...any,
 ) (e E, err error) {
 	var (
 		typ      = reflect.TypeOf((*E)(nil)).Elem()
-		id       sqlparser.Identifier
+		id       Identifier
 		r        *sql.Rows
 		cols     []string
 		coltypes []*sql.ColumnType
 		ok       bool
 	)
 
-	id, err = sqlparser.Parse(query, args...)
+	id, err = Parse(query, args...)
 	if err != nil {
 		err = errors.New("sql syntax fault")
 		return
@@ -195,7 +194,7 @@ func handleRow[E any](
 	}
 
 	// missed, go to database to get
-	r, cols, coltypes, err = queryDb(c.Db, ctx, query, args...)
+	r, cols, coltypes, err = queryDb(c.GetDatabase(), ctx, query, args...)
 	if err != nil {
 		return
 	}
@@ -268,19 +267,19 @@ func writeToStruct[E any](value []any, cols []string, columns map[string]column,
 	return
 }
 
-func saveToCache(c *cachepool.CachePool, key string, data any) {
-	c.Cache.Set(key, data, defaultExpiration)
+func saveToCache(c cachepool.ICachePool, key string, data any) {
+	c.Set(key, data, defaultExpiration)
 }
 
-func checkCache[T any](id sqlparser.Identifier, c *cachepool.CachePool) (T, bool) {
+func checkCache[T any](id Identifier, c cachepool.ICachePool) (T, bool) {
 	var t T
-	got, ok := c.Cache.Get(id.HashKey())
+	got, ok := c.Get(id.HashKey())
 	if ok {
 		t, ok = got.(T)
 		if ok {
 			return t, true
 		}
-		c.Cache.Delete(id.HashKey())
+		c.Delete(id.HashKey())
 		return t, false
 	}
 	return t, false

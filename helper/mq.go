@@ -1,19 +1,19 @@
 // cache_mq 用于在不同实例中同步共享的缓存，比如验证码等缓存
 
-package cache
+package helper
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/igxnon/cachepool/pkg/go-cache"
 	"github.com/streadway/amqp"
-	"log"
 	"time"
 )
 
 const exchangeName = "exchange.__cache_sync__"
 
-func runSyncFromMQ(ctx context.Context, cache *Cache, ch *amqp.Channel, name string) {
+func runSyncFromMQ(ctx context.Context, cache cache.ICache, ch *amqp.Channel, name string) error {
 	err := ch.ExchangeDeclare(
 		exchangeName,
 		"fanout",
@@ -24,7 +24,7 @@ func runSyncFromMQ(ctx context.Context, cache *Cache, ch *amqp.Channel, name str
 		nil,
 	)
 	if err != nil {
-		log.Panicf("declare exchange failed err %v\n", err)
+		return err
 	}
 	_, err = ch.QueueDeclare(
 		name,
@@ -35,7 +35,7 @@ func runSyncFromMQ(ctx context.Context, cache *Cache, ch *amqp.Channel, name str
 		nil,
 	)
 	if err != nil {
-		log.Panicf("declare queue failed err %v\n", err)
+		return err
 	}
 
 	err = ch.QueueBind(
@@ -46,7 +46,7 @@ func runSyncFromMQ(ctx context.Context, cache *Cache, ch *amqp.Channel, name str
 	)
 
 	if err != nil {
-		log.Panicf("bind queue failed err %v\n", err)
+		return err
 	}
 
 	msg, err := ch.Consume(
@@ -59,47 +59,69 @@ func runSyncFromMQ(ctx context.Context, cache *Cache, ch *amqp.Channel, name str
 		nil,
 	)
 	if err != nil {
-		log.Panicf("Err when create message queue, %v\n", err)
+		return err
 	}
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case m, ok := <-msg:
 			if !ok {
-				log.Printf("cache %s mq channel closed\n", name)
-				return
+				return nil
 			}
-			key, value, exp, err := decode(m.Body)
+			opt, key, value, exp, err := decode(m.Body)
 			if err != nil {
-				log.Printf("Warning comsumer %s message %s err %v\n",
-					m.ConsumerTag, m.MessageId, err)
+				// log.Printf("Warning comsumer %s message %s err %v\n",
+				// 	m.ConsumerTag, m.MessageId, err)
 				continue
 			}
-			cache.Set(key, value, exp)
-			log.Printf("Save %s into cache %s from MQ\n", string(m.Body), name)
+			if opt {
+				cache.Set(key, value, exp)
+				continue
+			}
+			cache.Delete(key)
 		}
 	}
 }
 
 type data struct {
+	Opt   bool          `json:"opt"` // true -> add, false -> delete
 	Key   string        `json:"key"`
-	Value any           `json:"value"`
-	Exp   time.Duration `json:"Exp"`
+	Value any           `json:"value,omitempty"`
+	Exp   time.Duration `json:"Exp,omitempty"`
 }
 
-func decode(b []byte) (key string, value any, exp time.Duration, err error) {
+func decode(b []byte) (opt bool, key string, value any, exp time.Duration, err error) {
 	d := data{}
 	err = json.Unmarshal(b, &d)
-	return d.Key, d.Value, d.Exp, err
+	return d.Opt, d.Key, d.Value, d.Exp, err
 }
 
 // Publish 将缓存同步到所有实例里
 func Publish(ch *amqp.Channel, key string, value any, d time.Duration) error {
 	data := data{
+		Opt:   true,
 		Key:   key,
 		Value: value,
 		Exp:   d,
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return ch.Publish(exchangeName, "", false, false, amqp.Publishing{
+		Timestamp:    time.Now(),
+		MessageId:    key,
+		DeliveryMode: amqp.Persistent,
+		ContentType:  "text/plain",
+		Body:         b,
+	})
+}
+
+func PublishDel(ch *amqp.Channel, key string) error {
+	data := data{
+		Opt: false,
+		Key: key,
 	}
 	b, err := json.Marshal(data)
 	if err != nil {
