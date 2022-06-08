@@ -37,28 +37,28 @@ func TestQuery(t *testing.T) {
 		return
 	}
 	pool := cachepool.New(cachepool.WithDatabase(db))
-	got, err := QueryRow[FooBar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
+	got, err := QueryRow[FooBar](pool, "foobar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Logf("%#v\n", got)
 
-	gots, err := Query[map[string]any](pool, "SELECT * FROM t LIMIT 5")
+	gots, err := Query[map[string]any](pool, "foobar:combine", "SELECT * FROM t LIMIT 5")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(gots)
 
-	gotOnes, err := Query[int32](pool, "SELECT bar FROM t LIMIT 5")
+	gotOnes, err := Query[int32](pool, "bar:int", "SELECT bar FROM t LIMIT 5")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(gotOnes)
 
-	gotOnesNullable, err := Query[sql.NullTime](pool, "SELECT foo FROM t LIMIT 5")
+	gotOnesNullable, err := Query[sql.NullTime](pool, "foo:time", "SELECT foo FROM t LIMIT 5")
 	if err != nil {
 		t.Error(err)
 		return
@@ -74,14 +74,14 @@ func TestBadQuery(t *testing.T) {
 		return
 	}
 	pool := cachepool.New(cachepool.WithDatabase(db))
-	got, err := QueryRow[BadFooBar](pool, "SELECT * FROM t WHERE bar = ? LIMIT 1", 1)
+	got, err := QueryRow[BadFooBar](pool, "foobar:combine", "SELECT * FROM t WHERE bar = ? LIMIT 1", 1)
 	if err == nil {
 		t.Error("opps")
 		return
 	}
 	t.Logf("%#v, %v\n", got, err)
 
-	gotOnes, err := Query[sql.NullTime](pool, "SELECT bar FROM t LIMIT 5")
+	gotOnes, err := Query[sql.NullTime](pool, "bar:int", "SELECT bar FROM t LIMIT 5")
 	if err == nil {
 		t.Error("opps")
 		return
@@ -101,17 +101,17 @@ func BenchmarkQueryWithCache(b *testing.B) {
 		b.Error(err)
 	}
 
-	_, err = QueryRow[map[string]any](pool, "SELECT * FROM t WHERE bar = ? LIMIT 1", 1)
+	_, err = QueryRow[map[string]any](pool, "foobar:combine", "SELECT * FROM t WHERE bar = ? LIMIT 1", 1)
 	if err != nil {
 		return
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		out, err = QueryRow[map[string]any](pool, "SELECT * FROM t WHERE bar = ? LIMIT 1", 1)
+		out, err = QueryRow[map[string]any](pool, "foobar:combine", "SELECT * FROM t WHERE bar = ? LIMIT 1", 1)
 		if err != nil {
 			b.Error(err)
 		}
-		if i%50000 == 0 {
+		if i%500000000 == 0 {
 			b.Log(out)
 		}
 	}

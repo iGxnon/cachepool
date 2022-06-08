@@ -61,11 +61,11 @@ func TestGlobalCacheHelper(t *testing.T) {
 	}
 	tc := redigo_cache.NewGlobalCache(time.Minute*10, conn, coder)
 	pool := cachepool.New(cachepool.WithCache(tc), cachepool.WithDatabase(db))
-	got, err := helper.QueryRow[Bar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
+	got, err := helper.QueryRow[Bar](pool, "bar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		t.Error(err)
 	}
-	got, err = helper.QueryRow[Bar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
+	got, err = helper.QueryRow[Bar](pool, "bar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	t.Log(got)
 }
 

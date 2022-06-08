@@ -12,10 +12,7 @@ import (
 	"reflect"
 	"time"
 	"unicode"
-	_ "unsafe"
 )
-
-const defaultExpiration = time.Hour
 
 type column struct {
 	typ       reflect.Type
@@ -112,13 +109,12 @@ func checkElemType(typ reflect.Type) error {
 func HandleRows[S ~[]E, E any](
 	ctx context.Context,
 	c cachepool.ICachePool,
-	query string, args ...any,
+	key, query string, args ...any,
 ) (s S, err error) {
 	var (
 		elem     = reflect.TypeOf((*E)(nil)).Elem()
 		typ      = reflect.TypeOf((*S)(nil)).Elem()
 		ok       bool
-		id       Identifier
 		r        *sql.Rows
 		cols     []string
 		coltypes []*sql.ColumnType
@@ -129,13 +125,12 @@ func HandleRows[S ~[]E, E any](
 		return
 	}
 
-	id, err = Parse(query, args...)
 	if err != nil {
 		err = errors.New("sql syntax fault")
 		return
 	}
 
-	s, ok = checkCache[S](id, c)
+	s, ok = checkCache[S](key, c)
 	if ok {
 		return
 	}
@@ -160,25 +155,23 @@ func HandleRows[S ~[]E, E any](
 		s = append(s, e)
 	}
 
-	saveToCache(c, id.Key(), s)
+	saveToCache(c, key, s)
 	return
 }
 
 func HandleRow[E any](
 	ctx context.Context,
 	c cachepool.ICachePool,
-	query string, args ...any,
+	key, query string, args ...any,
 ) (e E, err error) {
 	var (
 		typ      = reflect.TypeOf((*E)(nil)).Elem()
-		id       Identifier
 		r        *sql.Rows
 		cols     []string
 		coltypes []*sql.ColumnType
 		ok       bool
 	)
 
-	id, err = Parse(query, args...)
 	if err != nil {
 		err = errors.New("sql syntax fault")
 		return
@@ -189,7 +182,7 @@ func HandleRow[E any](
 		return
 	}
 
-	e, ok = checkCache[E](id, c)
+	e, ok = checkCache[E](key, c)
 	if ok {
 		return
 	}
@@ -216,7 +209,7 @@ func HandleRow[E any](
 		return
 	}
 
-	saveToCache(c, id.Key(), e)
+	saveToCache(c, key, e)
 	return
 }
 
@@ -278,9 +271,9 @@ type unmarshalable interface {
 	GetUnmarshal(k string, obj interface{}) bool
 }
 
-func checkCache[T any](id Identifier, c cachepool.ICachePool) (T, bool) {
+func checkCache[T any](key string, c cachepool.ICachePool) (T, bool) {
 	var t T
-	got, ok := c.Get(id.Key())
+	got, ok := c.Get(key)
 	if ok {
 		t, ok = got.(T)
 		if ok {
@@ -292,7 +285,7 @@ func checkCache[T any](id Identifier, c cachepool.ICachePool) (T, bool) {
 				return t, ok
 			}
 		}
-		c.Delete(id.Key())
+		c.Delete(key)
 		return t, false
 	}
 	return t, false

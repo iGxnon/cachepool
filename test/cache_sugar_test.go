@@ -28,12 +28,12 @@ func TestGlobalCacheSugarHelper(t *testing.T) {
 	}
 	cache := redigocache.NewGlobalCacheSugar(time.Minute*30, conn)
 	pool := cachepool.New(cachepool.WithCache(cache), cachepool.WithDatabase(db))
-	got, err := helper.QueryRow[Bar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
+	got, err := helper.QueryRow[Bar](pool, "bar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	got, err = helper.QueryRow[Bar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
+	got, err = helper.QueryRow[Bar](pool, "bar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		t.Error(err)
 		return
