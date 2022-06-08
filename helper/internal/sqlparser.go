@@ -11,6 +11,7 @@ type SelectOption bool
 const (
 	ALL      SelectOption = true
 	DISTINCT SelectOption = false
+	Format                = "sqlkey::{table}:{column}:{}"
 )
 
 // Parse TODO 解析更多语句信息
@@ -30,19 +31,17 @@ func Parse(query string, args ...any) (Identifier, error) {
 }
 
 type Identifier struct {
-	raw          string
-	stmt         sp.Statement
-	SelectOption SelectOption
-	SelectExpr   string
-	hashKey      string
-	// TODO
+	raw  string
+	stmt sp.Statement
+
+	key string
 }
 
-// HashKey TODO 更好的 Hash 算法
-func (i Identifier) init() {
-	i.hashKey = i.raw
+// Key table
+func (i *Identifier) init() {
+	i.key = strings.ReplaceAll(i.raw, " ", "-")
 }
 
-func (i Identifier) HashKey() string {
-	return i.hashKey
+func (i *Identifier) Key() string {
+	return i.key
 }

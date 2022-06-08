@@ -7,6 +7,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"github.com/alecthomas/binary"
 	"github.com/igxnon/cachepool"
 	"reflect"
 	"time"
@@ -159,7 +160,7 @@ func HandleRows[S ~[]E, E any](
 		s = append(s, e)
 	}
 
-	saveToCache(c, id.HashKey(), s)
+	saveToCache(c, id.Key(), s)
 	return
 }
 
@@ -215,7 +216,7 @@ func HandleRow[E any](
 		return
 	}
 
-	saveToCache(c, id.HashKey(), e)
+	saveToCache(c, id.Key(), e)
 	return
 }
 
@@ -268,24 +269,40 @@ func writeToStruct[E any](value []any, cols []string, columns map[string]column,
 }
 
 func saveToCache(c cachepool.ICachePool, key string, data any) {
-	c.Set(key, data, defaultExpiration)
+	// TODO customized expire time
+	c.SetDefault(key, data)
+}
+
+// for sugar global cache
+type unmarshalable interface {
+	GetUnmarshal(k string, obj interface{}) bool
 }
 
 func checkCache[T any](id Identifier, c cachepool.ICachePool) (T, bool) {
 	var t T
-	got, ok := c.Get(id.HashKey())
+	got, ok := c.Get(id.Key())
 	if ok {
 		t, ok = got.(T)
 		if ok {
 			return t, true
 		}
-		c.Delete(id.HashKey())
+		if _, ok = c.GetImplementedCache().(unmarshalable); ok {
+			if g, ok := got.([]byte); ok {
+				ok = binary.Unmarshal(g, &t) == nil
+				return t, ok
+			}
+		}
+		c.Delete(id.Key())
 		return t, false
 	}
 	return t, false
 }
 
 func queryDb(db *sql.DB, ctx context.Context, query string, args ...any) (r *sql.Rows, cols []string, coltypes []*sql.ColumnType, err error) {
+	if db == nil {
+		err = errors.New("database not found")
+		return
+	}
 	r, err = db.QueryContext(ctx, query, args...)
 	if err != nil {
 		err = errors.New("query to database failed")

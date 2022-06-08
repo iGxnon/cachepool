@@ -8,10 +8,13 @@ import (
 	_ "unsafe"
 )
 
+var _ ICachePool = (*CachePool)(nil)
+
 type ICachePool interface {
 	cache.ICache
 
 	GetDatabase() *sql.DB
+	GetImplementedCache() cache.ICache
 }
 
 type CachePool struct {
@@ -22,6 +25,10 @@ type CachePool struct {
 
 func (c *CachePool) GetDatabase() *sql.DB {
 	return c.db
+}
+
+func (c *CachePool) GetImplementedCache() cache.ICache {
+	return c.ICache
 }
 
 // UseMQ uses rabbitmq to sync some cache between different machines.

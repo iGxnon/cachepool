@@ -39,17 +39,16 @@ func WithGlobalCache(cache cache.ICache) Option {
 	}
 }
 
-// WithBuidinGlobalCache use buildin redis global cache
-// NOTE: after using buildin redis cache, all pointer of value set into cache should
-// implement redigocache.Object
-//
-// type Object interface {
-//		Marshal() []byte
-//		Unmarshal([]byte) bool
-// }
-func WithBuidinGlobalCache(defaultExpiration time.Duration, conn redis.Conn) Option {
+// WithBuildinGlobalCache use buildin redis global cache
+func WithBuildinGlobalCache(defaultExpiration time.Duration, conn redis.Conn, coder redigocache.Coder) Option {
 	return func(opt *Options) {
-		opt._globalCache = redigocache.NewGlobalCache(defaultExpiration, conn)
+		opt._globalCache = redigocache.NewGlobalCache(defaultExpiration, conn, coder)
+	}
+}
+
+func WithBuildinGlobalCacheSugar(defaultExpiration time.Duration, conn redis.Conn) Option {
+	return func(opt *Options) {
+		opt._globalCache = redigocache.NewGlobalCacheSugar(defaultExpiration, conn)
 	}
 }
 

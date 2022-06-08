@@ -6,11 +6,14 @@ import (
 	"time"
 )
 
-// DoubleCachePool act just like L1(localCache(readOnly map)) L2(localCache)
-// L3(globalCache) cache, and SQL database is just like Memory
+var _ ICachePool = (*DoubleCachePool)(nil)
+
+// DoubleCachePool implement globalCache and act just like L1(localCache(readOnly map))
+// L2(localCache) L3(globalCache) cache, and SQL database is just like Memory
 // if globalCache implemented fits all type of the value it stored and Get() could
 // return the value directly, helper.Query could be used on this pool
 type DoubleCachePool struct {
+	cache.ICache
 	localCache  cache.ICache
 	globalCache cache.ICache
 	db          *sql.DB
@@ -113,12 +116,17 @@ func (c *DoubleCachePool) GetDatabase() *sql.DB {
 	return c.db
 }
 
+func (c *DoubleCachePool) GetImplementedCache() cache.ICache {
+	return c.ICache
+}
+
 func NewDouble(opt ...Option) *DoubleCachePool {
 	opts := loadOptions(opt...)
 	if opts._globalCache == nil {
 		panic("global cache should be declared")
 	}
 	return &DoubleCachePool{
+		ICache:      opts._globalCache,
 		localCache:  opts.cache,
 		globalCache: opts._globalCache,
 		db:          opts.db,

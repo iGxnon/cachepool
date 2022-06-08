@@ -8,19 +8,6 @@ import (
 	"time"
 )
 
-type Bar struct {
-	foo string
-}
-
-func (b *Bar) Marshal() []byte {
-	return []byte(b.foo)
-}
-
-func (b *Bar) Unmarshal(bs []byte) bool {
-	b.foo = string(bs)
-	return true
-}
-
 func TestDoubleCachePool(t *testing.T) {
 	conn, err := redis.Dial("tcp", "127.0.0.1:6379")
 	if err != nil {
@@ -28,18 +15,18 @@ func TestDoubleCachePool(t *testing.T) {
 	}
 
 	pool := cachepool.NewDouble(
-		cachepool.WithBuidinGlobalCache(time.Minute*30, conn),
+		cachepool.WithBuildinGlobalCache(time.Minute*30, conn, coder),
 		cachepool.WithCache(cache.NewCache(time.Minute*5, time.Minute*10)))
 
-	pool.SetDefault("foo", &Bar{foo: "yee"})
-	bytes, ok := pool.Get("foo")
+	pool.SetDefault("foo", Bar{Yee: "yee"})
+	b, ok := pool.Get("foo")
+	b, ok = pool.Get("foo")
 	if !ok {
 		t.Error("not ok")
 	}
 
-	var bar = &Bar{}
-	bar.Unmarshal(bytes.([]byte))
-	if bar.foo != "yee" {
+	var bar = b.(Bar)
+	if bar.Yee != "yee" {
 		t.Error("not yee")
 	}
 }
@@ -58,18 +45,17 @@ func benchmarkDoubleCachePoolGet(b *testing.B, c cache.ICache) {
 	conn, _ := redis.Dial("tcp", "127.0.0.1:6379")
 
 	pool := cachepool.NewDouble(
-		cachepool.WithBuidinGlobalCache(time.Minute*30, conn),
+		cachepool.WithBuildinGlobalCache(time.Minute*30, conn, coder),
 		cachepool.WithCache(c))
 
-	pool.SetDefault("foo", &Bar{foo: "yee"})
+	pool.SetDefault("foo", Bar{Yee: "yee"})
 	bytes, ok := pool.Get("foo")
 	if !ok {
 		b.Error("not ok")
 	}
 
-	var bar = &Bar{}
-	bar.Unmarshal(bytes.([]byte))
-	if bar.foo != "yee" {
+	var bar = bytes.(Bar)
+	if bar.Yee != "yee" {
 		b.Error("not yee")
 	}
 

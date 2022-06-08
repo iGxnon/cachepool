@@ -1,30 +1,22 @@
 package redigo_cache
 
 import (
+	"github.com/alecthomas/binary"
 	"github.com/gomodule/redigo/redis"
 	"github.com/igxnon/cachepool/pkg/go-cache"
 	"strconv"
 	"time"
 )
 
-var _ cache.ICache = (*GlobalCache)(nil)
+var _ cache.ICache = (*GlobalCacheSugar)(nil)
 
-// Coder for encoding some specified types and decode it,
-// for all types supporting, you should use reflect
-// fortunately, GlobalCacheSugar is a considerable way
-type Coder interface {
-	Encode(v interface{}) ([]byte, error)
-	Decode(b []byte) (interface{}, error)
-}
-
-type GlobalCache struct {
+type GlobalCacheSugar struct {
 	conn              redis.Conn
 	defaultExpiration time.Duration
-	coder             Coder
 }
 
-func (g *GlobalCache) set(k string, x interface{}, d time.Duration, norX string) error {
-	b, err := g.coder.Encode(x)
+func (g *GlobalCacheSugar) set(k string, x interface{}, d time.Duration, norX string) error {
+	b, err := binary.Marshal(x)
 	if err != nil {
 		return err
 	}
@@ -50,35 +42,44 @@ func (g *GlobalCache) set(k string, x interface{}, d time.Duration, norX string)
 	return err
 }
 
-func (g *GlobalCache) Set(k string, x interface{}, d time.Duration) {
+func (g *GlobalCacheSugar) Set(k string, x interface{}, d time.Duration) {
 	_ = g.set(k, x, d, "")
 }
 
-func (g *GlobalCache) SetDefault(k string, x interface{}) {
+func (g *GlobalCacheSugar) SetDefault(k string, x interface{}) {
 	g.Set(k, x, cache.DefaultExpiration)
 }
 
 // Add always return nil because redis keep adding once, if an error occurred
 // while sending command to redis server, the error will be returned
-func (g *GlobalCache) Add(k string, x interface{}, d time.Duration) error {
+func (g *GlobalCacheSugar) Add(k string, x interface{}, d time.Duration) error {
 	return g.set(k, x, d, "NX")
 }
 
-func (g *GlobalCache) Replace(k string, x interface{}, d time.Duration) error {
+func (g *GlobalCacheSugar) Replace(k string, x interface{}, d time.Duration) error {
 	return g.set(k, x, d, "XX")
 }
 
 // Get return bytes, you should Unmarshal it in person
-func (g *GlobalCache) Get(k string) (interface{}, bool) {
+func (g *GlobalCacheSugar) Get(k string) (interface{}, bool) {
 	b, err := redis.Bytes(g.conn.Do("GET", k))
 	if err != nil {
 		return nil, false
 	}
-	v, err := g.coder.Decode(b)
-	return v, err == nil
+	return b, true
 }
 
-func (g *GlobalCache) GetWithExpiration(k string) (interface{}, time.Time, bool) {
+// GetUnmarshal helps unmarshal object, obj argument should be a pointer
+// it implements interface unmarshalable in helper/internal.query
+func (g *GlobalCacheSugar) GetUnmarshal(k string, obj interface{}) bool {
+	b, ok := g.Get(k)
+	if !ok {
+		return false
+	}
+	return binary.Unmarshal(b.([]byte), obj) == nil
+}
+
+func (g *GlobalCacheSugar) GetWithExpiration(k string) (interface{}, time.Time, bool) {
 	ttl, err := redis.Int64(g.conn.Do("PTTL", k))
 	if err != nil {
 		return nil, time.Time{}, false
@@ -91,31 +92,31 @@ func (g *GlobalCache) GetWithExpiration(k string) (interface{}, time.Time, bool)
 	return nil, time.Time{}, false
 }
 
-func (g *GlobalCache) Increment(k string, n int64) error {
+func (g *GlobalCacheSugar) Increment(k string, n int64) error {
 	_, err := g.conn.Do("INCRBY", k, n)
 	return err
 }
 
-func (g *GlobalCache) Decrement(k string, n int64) error {
+func (g *GlobalCacheSugar) Decrement(k string, n int64) error {
 	_, err := g.conn.Do("DECRBY", k, n)
 	return err
 }
 
-func (g *GlobalCache) Delete(k string) {
+func (g *GlobalCacheSugar) Delete(k string) {
 	_, _ = g.conn.Do("DEL", k)
 }
 
-func (g *GlobalCache) DeleteExpired() {
+func (g *GlobalCacheSugar) DeleteExpired() {
 	// you won't
 	return
 }
 
-func (g *GlobalCache) Items() map[string]cache.IItem {
+func (g *GlobalCacheSugar) Items() map[string]cache.IItem {
 	// can not implement
 	return nil
 }
 
-func (g *GlobalCache) ItemCount() int {
+func (g *GlobalCacheSugar) ItemCount() int {
 	cnt, err := redis.Int(g.conn.Do("DBSIZE"))
 	if err != nil {
 		return -1
@@ -123,15 +124,14 @@ func (g *GlobalCache) ItemCount() int {
 	return cnt
 }
 
-func (g *GlobalCache) Flush() {
+func (g *GlobalCacheSugar) Flush() {
 	// you'd better not do this
 	return
 }
 
-func NewGlobalCache(defaultExpiration time.Duration, conn redis.Conn, coder Coder) *GlobalCache {
-	return &GlobalCache{
+func NewGlobalCacheSugar(defaultExpiration time.Duration, conn redis.Conn) *GlobalCacheSugar {
+	return &GlobalCacheSugar{
 		defaultExpiration: defaultExpiration,
 		conn:              conn,
-		coder:             coder,
 	}
 }
