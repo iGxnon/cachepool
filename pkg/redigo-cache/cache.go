@@ -1,26 +1,18 @@
-package redigo_cache
+package redicache
 
 import (
 	"github.com/gomodule/redigo/redis"
-	"github.com/igxnon/cachepool/pkg/go-cache"
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"strconv"
 	"time"
 )
 
-var _ cache.ICache = (*GlobalCache)(nil)
-
-// Coder for encoding some specified types and decode it,
-// for all types supporting, you should use reflect
-// fortunately, GlobalCacheSugar is a considerable way
-type Coder interface {
-	Encode(v interface{}) ([]byte, error)
-	Decode(b []byte) (interface{}, error)
-}
+var _ common.ICache = (*GlobalCache)(nil)
 
 type GlobalCache struct {
 	conn              redis.Conn
 	defaultExpiration time.Duration
-	coder             Coder
+	coder             common.Coder
 }
 
 func (g *GlobalCache) set(k string, x interface{}, d time.Duration, norX string) error {
@@ -28,7 +20,7 @@ func (g *GlobalCache) set(k string, x interface{}, d time.Duration, norX string)
 	if err != nil {
 		return err
 	}
-	if d == cache.DefaultExpiration {
+	if d == common.DefaultExpiration {
 		d = g.defaultExpiration
 	}
 	if d > 0 {
@@ -55,7 +47,7 @@ func (g *GlobalCache) Set(k string, x interface{}, d time.Duration) {
 }
 
 func (g *GlobalCache) SetDefault(k string, x interface{}) {
-	g.Set(k, x, cache.DefaultExpiration)
+	g.Set(k, x, common.DefaultExpiration)
 }
 
 // Add always return nil because redis keep adding once, if an error occurred
@@ -105,16 +97,6 @@ func (g *GlobalCache) Delete(k string) {
 	_, _ = g.conn.Do("DEL", k)
 }
 
-func (g *GlobalCache) DeleteExpired() {
-	// you won't
-	return
-}
-
-func (g *GlobalCache) Items() map[string]cache.IItem {
-	// can not implement
-	return nil
-}
-
 func (g *GlobalCache) ItemCount() int {
 	cnt, err := redis.Int(g.conn.Do("DBSIZE"))
 	if err != nil {
@@ -128,7 +110,7 @@ func (g *GlobalCache) Flush() {
 	return
 }
 
-func NewGlobalCache(defaultExpiration time.Duration, conn redis.Conn, coder Coder) *GlobalCache {
+func NewGlobalCache(defaultExpiration time.Duration, conn redis.Conn, coder common.Coder) *GlobalCache {
 	return &GlobalCache{
 		defaultExpiration: defaultExpiration,
 		conn:              conn,

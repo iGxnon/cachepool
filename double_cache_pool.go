@@ -2,7 +2,7 @@ package cachepool
 
 import (
 	"database/sql"
-	"github.com/igxnon/cachepool/pkg/go-cache"
+	"github.com/igxnon/cachepool/pkg/cache"
 	"time"
 )
 
@@ -12,6 +12,7 @@ var _ ICachePool = (*DoubleCachePool)(nil)
 // L2(localCache) L3(globalCache) cache, and SQL database is just like Memory
 // if globalCache implemented fits all type of the value it stored and Get() could
 // return the value directly, helper.Query could be used on this pool
+// DoubleCachePool used to build Cache-Aside between local cache and global cache
 type DoubleCachePool struct {
 	cache.ICache
 	localCache  cache.ICache
@@ -19,7 +20,6 @@ type DoubleCachePool struct {
 	db          *sql.DB
 }
 
-// Set cache sidecar
 func (c *DoubleCachePool) Set(k string, x interface{}, d time.Duration) {
 	c.globalCache.Set(k, x, d)
 	c.localCache.Delete(k)
@@ -92,15 +92,6 @@ func (c *DoubleCachePool) Decrement(k string, n int64) error {
 func (c *DoubleCachePool) Delete(k string) {
 	c.globalCache.Delete(k)
 	c.localCache.Delete(k)
-}
-
-func (c *DoubleCachePool) DeleteExpired() {
-	c.globalCache.DeleteExpired()
-	c.localCache.DeleteExpired()
-}
-
-func (c *DoubleCachePool) Items() map[string]cache.IItem {
-	return c.globalCache.Items()
 }
 
 func (c *DoubleCachePool) ItemCount() int {

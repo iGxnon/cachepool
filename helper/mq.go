@@ -6,14 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/igxnon/cachepool/pkg/go-cache"
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"github.com/streadway/amqp"
 	"time"
 )
 
 const exchangeName = "exchange.__cache_sync__"
 
-func runSyncFromMQ(ctx context.Context, cache cache.ICache, ch *amqp.Channel, name string) error {
+func runSyncFromMQ(ctx context.Context, cache common.ICache, ch *amqp.Channel, name string) error {
 	err := ch.ExchangeDeclare(
 		exchangeName,
 		"fanout",

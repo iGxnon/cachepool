@@ -3,6 +3,7 @@ package test
 import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/igxnon/cachepool"
+	"github.com/igxnon/cachepool/pkg/cache"
 	"github.com/igxnon/cachepool/pkg/go-cache"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ func TestDoubleCachePool(t *testing.T) {
 
 	pool := cachepool.NewDouble(
 		cachepool.WithBuildinGlobalCache(time.Minute*30, conn, coder),
-		cachepool.WithCache(cache.NewCache(time.Minute*5, time.Minute*10)))
+		cachepool.WithCache(gocache.NewCache(time.Minute*5, time.Minute*10)))
 
 	pool.SetDefault("foo", Bar{Yee: "yee"})
 	b, ok := pool.Get("foo")
@@ -32,11 +33,11 @@ func TestDoubleCachePool(t *testing.T) {
 }
 
 func BenchmarkDoubleCachePoolGet(b *testing.B) {
-	benchmarkDoubleCachePoolGet(b, cache.NewCache(time.Minute*5, time.Minute*10))
+	benchmarkDoubleCachePoolGet(b, gocache.NewCache(time.Minute*5, time.Minute*10))
 }
 
 func BenchmarkDoubleSyncMapCachePoolGet(b *testing.B) {
-	benchmarkDoubleCachePoolGet(b, cache.NewSyncMapCache(time.Minute*5, time.Minute*10))
+	benchmarkDoubleCachePoolGet(b, gocache.NewSyncMapCache(time.Minute*5, time.Minute*10))
 }
 
 func benchmarkDoubleCachePoolGet(b *testing.B, c cache.ICache) {

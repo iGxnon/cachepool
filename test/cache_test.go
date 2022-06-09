@@ -8,7 +8,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/igxnon/cachepool"
 	"github.com/igxnon/cachepool/helper"
-	"github.com/igxnon/cachepool/pkg/go-cache"
+	"github.com/igxnon/cachepool/pkg/cache"
 	"github.com/igxnon/cachepool/pkg/redigo-cache"
 	"strconv"
 	"sync"
@@ -44,7 +44,7 @@ var (
 )
 
 func TestGlobalCache(t *testing.T) {
-	tc := redigo_cache.NewGlobalCache(time.Minute*10, conn, coder)
+	tc := redicache.NewGlobalCache(time.Minute*10, conn, coder)
 	tc.Set("foobarba", Bar{Yee: "hello"}, cache.DefaultExpiration)
 	g, ok := tc.Get("foobarba")
 	var got = g.(Bar)
@@ -59,7 +59,7 @@ func TestGlobalCacheHelper(t *testing.T) {
 	if err != nil {
 		return
 	}
-	tc := redigo_cache.NewGlobalCache(time.Minute*10, conn, coder)
+	tc := redicache.NewGlobalCache(time.Minute*10, conn, coder)
 	pool := cachepool.New(cachepool.WithCache(tc), cachepool.WithDatabase(db))
 	got, err := helper.QueryRow[Bar](pool, "bar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
@@ -79,7 +79,7 @@ func BenchmarkGlobalCacheGetNotExpiring(b *testing.B) {
 
 func benchmarkGlobalCacheGet(b *testing.B, exp time.Duration) {
 	b.StopTimer()
-	tc := redigo_cache.NewGlobalCache(exp, conn, coder)
+	tc := redicache.NewGlobalCache(exp, conn, coder)
 	tc.Set("foobarba", Bar{Yee: "hello"}, cache.DefaultExpiration)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -98,7 +98,7 @@ func BenchmarkGlobalCacheGetManyConcurrentNotExpiring(b *testing.B) {
 func benchmarkGlobalCacheGetManyConcurrent(b *testing.B, exp time.Duration) {
 	b.StopTimer()
 	n := 10000
-	tsc := redigo_cache.NewGlobalCache(exp, conn, coder)
+	tsc := redicache.NewGlobalCache(exp, conn, coder)
 	keys := make([]string, n)
 	for i := 0; i < n; i++ {
 		k := "foo" + strconv.Itoa(i)

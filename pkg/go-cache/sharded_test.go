@@ -1,6 +1,7 @@
-package cache
+package gocache
 
 import (
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"strconv"
 	"sync"
 	"testing"
@@ -27,9 +28,9 @@ var shardedKeys = []string{
 }
 
 func TestShardedCache(t *testing.T) {
-	tc := NewSharded(DefaultExpiration, 0, 13)
+	tc := NewSharded(common.DefaultExpiration, 0, 13)
 	for _, v := range shardedKeys {
-		tc.Set(v, "value", DefaultExpiration)
+		tc.Set(v, "value", common.DefaultExpiration)
 	}
 }
 
@@ -38,13 +39,13 @@ func BenchmarkShardedCacheGetExpiring(b *testing.B) {
 }
 
 func BenchmarkShardedCacheGetNotExpiring(b *testing.B) {
-	benchmarkShardedCacheGet(b, NoExpiration)
+	benchmarkShardedCacheGet(b, common.NoExpiration)
 }
 
 func benchmarkShardedCacheGet(b *testing.B, exp time.Duration) {
 	b.StopTimer()
 	tc := NewSharded(exp, 0, 10)
-	tc.Set("foobarba", "zquux", DefaultExpiration)
+	tc.Set("foobarba", "zquux", common.DefaultExpiration)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		tc.Get("foobarba")
@@ -56,7 +57,7 @@ func BenchmarkShardedCacheGetManyConcurrentExpiring(b *testing.B) {
 }
 
 func BenchmarkShardedCacheGetManyConcurrentNotExpiring(b *testing.B) {
-	benchmarkShardedCacheGetManyConcurrent(b, NoExpiration)
+	benchmarkShardedCacheGetManyConcurrent(b, common.NoExpiration)
 }
 
 func benchmarkShardedCacheGetManyConcurrent(b *testing.B, exp time.Duration) {
@@ -67,7 +68,7 @@ func benchmarkShardedCacheGetManyConcurrent(b *testing.B, exp time.Duration) {
 	for i := 0; i < n; i++ {
 		k := "foo" + strconv.Itoa(i)
 		keys[i] = k
-		tsc.Set(k, "bar", DefaultExpiration)
+		tsc.Set(k, "bar", common.DefaultExpiration)
 	}
 	each := b.N / n
 	wg := new(sync.WaitGroup)

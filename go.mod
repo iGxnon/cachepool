@@ -8,6 +8,9 @@ require (
 )
 
 require (
-	github.com/alecthomas/binary v0.0.0-20190922233330-fb1b1d9c299c // indirect
-	github.com/gomodule/redigo v1.8.8 // indirect
+	github.com/alecthomas/binary v0.0.0-20190922233330-fb1b1d9c299c
+	github.com/coocood/freecache v1.2.1
+	github.com/gomodule/redigo v1.8.8
 )
+
+require github.com/cespare/xxhash/v2 v2.1.2 // indirect

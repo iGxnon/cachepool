@@ -1,4 +1,4 @@
-package cache
+package gocache
 
 // Global cache use NoSQL database as its container
 // Since database runs on other process, it's easy to

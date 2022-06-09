@@ -1,6 +1,7 @@
-package cache
+package gocache
 
 import (
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"strconv"
 	"sync"
 	"testing"
@@ -12,13 +13,13 @@ func BenchmarkSyncMapCacheGetExpiring(b *testing.B) {
 }
 
 func BenchmarkSyncMapCacheGetNotExpiring(b *testing.B) {
-	benchmarkSyncMapCacheGet(b, NoExpiration)
+	benchmarkSyncMapCacheGet(b, common.NoExpiration)
 }
 
 func benchmarkSyncMapCacheGet(b *testing.B, exp time.Duration) {
 	b.StopTimer()
 	tc := NewSyncMapCache(exp, 0)
-	tc.Set("foobarba", "zquux", DefaultExpiration)
+	tc.Set("foobarba", "zquux", common.DefaultExpiration)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		tc.Get("foobarba")
@@ -30,7 +31,7 @@ func BenchmarkSyncMapCacheGetManyConcurrentExpiring(b *testing.B) {
 }
 
 func BenchmarkSyncMapCacheGetManyConcurrentNotExpiring(b *testing.B) {
-	benchmarkSyncMapCacheGetManyConcurrent(b, NoExpiration)
+	benchmarkSyncMapCacheGetManyConcurrent(b, common.NoExpiration)
 }
 
 func benchmarkSyncMapCacheGetManyConcurrent(b *testing.B, exp time.Duration) {
@@ -41,7 +42,7 @@ func benchmarkSyncMapCacheGetManyConcurrent(b *testing.B, exp time.Duration) {
 	for i := 0; i < n; i++ {
 		k := "foo" + strconv.Itoa(i)
 		keys[i] = k
-		tsc.Set(k, "bar", DefaultExpiration)
+		tsc.Set(k, "bar", common.DefaultExpiration)
 	}
 	each := b.N / n
 	wg := new(sync.WaitGroup)

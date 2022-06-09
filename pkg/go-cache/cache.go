@@ -1,14 +1,17 @@
-package cache
+package gocache
 
 import (
 	"encoding/gob"
 	"fmt"
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"io"
 	"os"
 	"runtime"
 	"sync"
 	"time"
 )
+
+var _ common.ICache = (*Cache)(nil)
 
 type Item struct {
 	Object     interface{}
@@ -42,7 +45,7 @@ type cache struct {
 func (c *cache) Set(k string, x interface{}, d time.Duration) {
 	// "Inlining" of set
 	var e int64
-	if d == DefaultExpiration {
+	if d == common.DefaultExpiration {
 		d = c.defaultExpiration
 	}
 	if d > 0 {
@@ -60,7 +63,7 @@ func (c *cache) Set(k string, x interface{}, d time.Duration) {
 
 func (c *cache) set(k string, x interface{}, d time.Duration) {
 	var e int64
-	if d == DefaultExpiration {
+	if d == common.DefaultExpiration {
 		d = c.defaultExpiration
 	}
 	if d > 0 {
@@ -75,7 +78,7 @@ func (c *cache) set(k string, x interface{}, d time.Duration) {
 // SetDefault Add an item to the cache, replacing any existing item, using the default
 // expiration.
 func (c *cache) SetDefault(k string, x interface{}) {
-	c.Set(k, x, DefaultExpiration)
+	c.Set(k, x, common.DefaultExpiration)
 }
 
 // Add an item to the cache only if an item doesn't already exist for the given
@@ -1026,10 +1029,10 @@ func (c *cache) LoadFile(fname string) error {
 }
 
 // Items Copies all unexpired items in the cache into a new map and returns it.
-func (c *cache) Items() map[string]IItem {
+func (c *cache) Items() map[string]common.IItem {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	m := make(map[string]IItem, len(c.items))
+	m := make(map[string]common.IItem, len(c.items))
 	now := time.Now().UnixNano()
 	for k, v := range c.items {
 		// "Inlining" of Expired
@@ -1068,7 +1071,11 @@ type janitor struct {
 	stop     chan bool
 }
 
-func (j *janitor) Run(c ICache) {
+type runner interface {
+	DeleteExpired()
+}
+
+func (j *janitor) Run(c runner) {
 	ticker := time.NewTicker(j.Interval)
 	for {
 		select {

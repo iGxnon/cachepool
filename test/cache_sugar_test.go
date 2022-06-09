@@ -4,17 +4,17 @@ import (
 	"database/sql"
 	"github.com/igxnon/cachepool"
 	"github.com/igxnon/cachepool/helper"
-	"github.com/igxnon/cachepool/pkg/go-cache"
-	redigocache "github.com/igxnon/cachepool/pkg/redigo-cache"
+	"github.com/igxnon/cachepool/pkg/cache"
+	"github.com/igxnon/cachepool/pkg/redigo-cache"
 	"testing"
 	"time"
 )
 
 func TestGlobalCacheSugar(t *testing.T) {
-	cache := redigocache.NewGlobalCacheSugar(time.Minute*30, conn)
-	cache.SetDefault("foo", "bar")
+	c := redicache.NewGlobalCacheSugar(time.Minute*30, conn)
+	c.SetDefault("foo", "bar")
 	var bar string
-	cache.GetUnmarshal("foo", &bar)
+	c.GetUnmarshal("foo", &bar)
 	if bar != "bar" {
 		t.Error("error")
 	}
@@ -26,8 +26,8 @@ func TestGlobalCacheSugarHelper(t *testing.T) {
 	if err != nil {
 		return
 	}
-	cache := redigocache.NewGlobalCacheSugar(time.Minute*30, conn)
-	pool := cachepool.New(cachepool.WithCache(cache), cachepool.WithDatabase(db))
+	c := redicache.NewGlobalCacheSugar(time.Minute*30, conn)
+	pool := cachepool.New(cachepool.WithCache(c), cachepool.WithDatabase(db))
 	got, err := helper.QueryRow[Bar](pool, "bar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		t.Error(err)
@@ -51,7 +51,7 @@ func BenchmarkGlobalCacheSugarGetNoExpiring(b *testing.B) {
 
 func benchmarkGlobalCacheSugarGet(b *testing.B, exp time.Duration) {
 	b.StopTimer()
-	tc := redigocache.NewGlobalCacheSugar(exp, conn)
+	tc := redicache.NewGlobalCacheSugar(exp, conn)
 	tc.SetDefault("foobarba", Bar{Yee: "hello"})
 	var bar Bar
 	b.StartTimer()

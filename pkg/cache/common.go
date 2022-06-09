@@ -56,12 +56,6 @@ type ICache interface {
 	// Delete an item from the cache. Does nothing if the key is not in the cache.
 	Delete(k string)
 
-	// DeleteExpired Delete all expired items from the cache.
-	DeleteExpired()
-
-	// Items Copies all unexpired items in the cache into a new map and returns it.
-	Items() map[string]IItem
-
 	// ItemCount Returns the number of items in the cache. This may include items that have
 	// expired, but have not yet been cleaned up.
 	ItemCount() int
@@ -73,4 +67,12 @@ type ICache interface {
 type IItem interface {
 	// Expired Returns true if the item has expired.
 	Expired() bool
+}
+
+// Coder for encoding some specified types and decode it,
+// for all types supporting, you should use reflect
+// fortunately, GlobalCacheSugar is a considerable way
+type Coder interface {
+	Encode(v interface{}) ([]byte, error)
+	Decode(b []byte) (interface{}, error)
 }

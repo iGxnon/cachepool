@@ -1,14 +1,14 @@
-package redigo_cache
+package redicache
 
 import (
 	"github.com/alecthomas/binary"
 	"github.com/gomodule/redigo/redis"
-	"github.com/igxnon/cachepool/pkg/go-cache"
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"strconv"
 	"time"
 )
 
-var _ cache.ICache = (*GlobalCacheSugar)(nil)
+var _ common.ICache = (*GlobalCacheSugar)(nil)
 
 type GlobalCacheSugar struct {
 	conn              redis.Conn
@@ -20,7 +20,7 @@ func (g *GlobalCacheSugar) set(k string, x interface{}, d time.Duration, norX st
 	if err != nil {
 		return err
 	}
-	if d == cache.DefaultExpiration {
+	if d == common.DefaultExpiration {
 		d = g.defaultExpiration
 	}
 	if d > 0 {
@@ -47,7 +47,7 @@ func (g *GlobalCacheSugar) Set(k string, x interface{}, d time.Duration) {
 }
 
 func (g *GlobalCacheSugar) SetDefault(k string, x interface{}) {
-	g.Set(k, x, cache.DefaultExpiration)
+	g.Set(k, x, common.DefaultExpiration)
 }
 
 // Add always return nil because redis keep adding once, if an error occurred
@@ -104,16 +104,6 @@ func (g *GlobalCacheSugar) Decrement(k string, n int64) error {
 
 func (g *GlobalCacheSugar) Delete(k string) {
 	_, _ = g.conn.Do("DEL", k)
-}
-
-func (g *GlobalCacheSugar) DeleteExpired() {
-	// you won't
-	return
-}
-
-func (g *GlobalCacheSugar) Items() map[string]cache.IItem {
-	// can not implement
-	return nil
 }
 
 func (g *GlobalCacheSugar) ItemCount() int {

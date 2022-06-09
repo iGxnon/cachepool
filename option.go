@@ -3,8 +3,9 @@ package cachepool
 import (
 	"database/sql"
 	"github.com/gomodule/redigo/redis"
+	"github.com/igxnon/cachepool/pkg/cache"
 	"github.com/igxnon/cachepool/pkg/go-cache"
-	redigocache "github.com/igxnon/cachepool/pkg/redigo-cache"
+	"github.com/igxnon/cachepool/pkg/redigo-cache"
 	"time"
 )
 
@@ -22,7 +23,7 @@ func loadOptions(options ...Option) *Options {
 		option(opts)
 	}
 	if opts.cache == nil {
-		opts.cache = cache.NewCache(time.Minute*5, time.Minute*30)
+		opts.cache = gocache.NewCache(time.Minute*5, time.Minute*30)
 	}
 	return opts
 }
@@ -40,15 +41,15 @@ func WithGlobalCache(cache cache.ICache) Option {
 }
 
 // WithBuildinGlobalCache use buildin redis global cache
-func WithBuildinGlobalCache(defaultExpiration time.Duration, conn redis.Conn, coder redigocache.Coder) Option {
+func WithBuildinGlobalCache(defaultExpiration time.Duration, conn redis.Conn, coder cache.Coder) Option {
 	return func(opt *Options) {
-		opt._globalCache = redigocache.NewGlobalCache(defaultExpiration, conn, coder)
+		opt._globalCache = redicache.NewGlobalCache(defaultExpiration, conn, coder)
 	}
 }
 
 func WithBuildinGlobalCacheSugar(defaultExpiration time.Duration, conn redis.Conn) Option {
 	return func(opt *Options) {
-		opt._globalCache = redigocache.NewGlobalCacheSugar(defaultExpiration, conn)
+		opt._globalCache = redicache.NewGlobalCacheSugar(defaultExpiration, conn)
 	}
 }
 

@@ -3,7 +3,7 @@ package cachepool
 import (
 	"context"
 	"database/sql"
-	"github.com/igxnon/cachepool/pkg/go-cache"
+	"github.com/igxnon/cachepool/pkg/cache"
 	"github.com/streadway/amqp"
 	_ "unsafe"
 )

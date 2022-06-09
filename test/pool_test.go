@@ -90,7 +90,7 @@ func TestMQInManyPool(t *testing.T) {
 
 func BenchmarkCachePoolGet(b *testing.B) {
 	b.StopTimer()
-	pool := cachepool.New(cachepool.WithCache(cache.NewCache(time.Minute*5, time.Minute*30)))
+	pool := cachepool.New(cachepool.WithCache(gocache.NewCache(time.Minute*5, time.Minute*30)))
 	pool.SetDefault("foo", "bar")
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -101,7 +101,7 @@ func BenchmarkCachePoolGet(b *testing.B) {
 func BenchmarkSyncMapCachePoolGet(b *testing.B) {
 	b.StopTimer()
 	pool := cachepool.New(
-		cachepool.WithCache(cache.NewSyncMapCache(time.Minute*5, time.Minute*30)))
+		cachepool.WithCache(gocache.NewSyncMapCache(time.Minute*5, time.Minute*30)))
 	pool.SetDefault("foo", "bar")
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -112,7 +112,7 @@ func BenchmarkSyncMapCachePoolGet(b *testing.B) {
 func BenchmarkCachePoolParallelGet(b *testing.B) {
 	b.StopTimer()
 	pool := cachepool.New(
-		cachepool.WithCache(cache.NewCache(time.Minute*5, time.Minute*30)))
+		cachepool.WithCache(gocache.NewCache(time.Minute*5, time.Minute*30)))
 	pool.SetDefault("foo", "bar")
 	n := 100
 	each := b.N / n
@@ -133,7 +133,7 @@ func BenchmarkCachePoolParallelGet(b *testing.B) {
 func BenchmarkSyncMapCachePoolParallelGet(b *testing.B) {
 	b.StopTimer()
 	pool := cachepool.New(
-		cachepool.WithCache(cache.NewSyncMapCache(time.Minute*5, time.Minute*30)))
+		cachepool.WithCache(gocache.NewSyncMapCache(time.Minute*5, time.Minute*30)))
 	pool.SetDefault("foo", "bar")
 	n := 100
 	each := b.N / n

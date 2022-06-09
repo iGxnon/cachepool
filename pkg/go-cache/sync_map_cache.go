@@ -1,7 +1,8 @@
-package cache
+package gocache
 
 import (
 	"fmt"
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"runtime"
 	"sync"
 	"time"
@@ -15,6 +16,8 @@ import (
 // growing while cache getting larger.
 
 // NOTE: Some method maybe not atomic
+
+var _ common.ICache = (*SyncMapCache)(nil)
 
 type SyncMapCache struct {
 	*syncMapCache
@@ -31,7 +34,7 @@ type syncMapCache struct {
 func (s *syncMapCache) Set(k string, x interface{}, d time.Duration) {
 	// "Inlining" of set
 	var e int64
-	if d == DefaultExpiration {
+	if d == common.DefaultExpiration {
 		d = s.defaultExpiration
 	}
 	if d > 0 {
@@ -44,7 +47,7 @@ func (s *syncMapCache) Set(k string, x interface{}, d time.Duration) {
 }
 
 func (s *syncMapCache) SetDefault(k string, x interface{}) {
-	s.Set(k, x, DefaultExpiration)
+	s.Set(k, x, common.DefaultExpiration)
 }
 
 // Add NOTE: 2x locking delay(s.mu and sync.Map set mutex)
@@ -209,8 +212,8 @@ func (s *syncMapCache) DeleteExpired() {
 	})
 }
 
-func (s *syncMapCache) Items() map[string]IItem {
-	items := make(map[string]IItem)
+func (s *syncMapCache) Items() map[string]common.IItem {
+	items := make(map[string]common.IItem)
 	s.items.Range(func(k, item any) bool {
 		items[k.(string)] = item.(Item)
 		return true

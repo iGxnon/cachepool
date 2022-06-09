@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/igxnon/cachepool/helper"
-	"github.com/igxnon/cachepool/pkg/go-cache"
+	"github.com/igxnon/cachepool/pkg/cache"
 	"github.com/streadway/amqp"
 	"time"
 )
@@ -67,25 +67,25 @@ func ExampleHelper() {
 		return
 	}
 	pool := New(WithDatabase(db))
-	got, err := helper.QueryRow[FooBar](pool, "SELECT * FROM t LIMIT 1 OFFSET 1")
+	got, err := helper.QueryRow[FooBar](pool, "foobar:combine", "SELECT * FROM t LIMIT 1 OFFSET 1")
 	if err != nil {
 		return
 	}
 	fmt.Printf("%#v\n", got)
 
-	gots, err := helper.Query[map[string]any](pool, "SELECT * FROM t LIMIT 5")
+	gots, err := helper.Query[map[string]any](pool, "foobar:combine", "SELECT * FROM t LIMIT 5")
 	if err != nil {
 		return
 	}
 	fmt.Println(gots)
 
-	gotOnes, err := helper.Query[int32](pool, "SELECT bar FROM t LIMIT 5")
+	gotOnes, err := helper.Query[int32](pool, "foobar:int", "SELECT bar FROM t LIMIT 5")
 	if err != nil {
 		return
 	}
 	fmt.Println(gotOnes)
 
-	gotOnesNullable, err := helper.Query[sql.NullTime](pool, "SELECT foo FROM t LIMIT 5")
+	gotOnesNullable, err := helper.Query[sql.NullTime](pool, "foobar:time", "SELECT foo FROM t LIMIT 5")
 	if err != nil {
 		return
 	}

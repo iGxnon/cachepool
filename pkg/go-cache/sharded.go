@@ -1,12 +1,14 @@
-package cache
+package gocache
 
 import (
 	"crypto/rand"
+	common "github.com/igxnon/cachepool/pkg/cache"
 	"math"
 	"math/big"
 	insecurerand "math/rand"
 	"os"
 	"runtime"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,6 +20,8 @@ import (
 // total cache sizes, and faster for larger ones.
 //
 // See cache_test.go for a few benchmarks.
+
+var _ common.ICache = (*ShardedCache)(nil)
 
 type ShardedCache struct {
 	*shardedCache
@@ -109,8 +113,8 @@ func (sc *shardedCache) DeleteExpired() {
 // fields of the items should be checked. Note that explicit synchronization
 // is needed to use a cache and its corresponding Items() return values at
 // the same time, as the maps are shared.
-func (sc *shardedCache) Items() []map[string]IItem {
-	res := make([]map[string]IItem, len(sc.cs))
+func (sc *shardedCache) items() []map[string]common.IItem {
+	res := make([]map[string]common.IItem, len(sc.cs))
 	for i, v := range sc.cs {
 		res[i] = v.Items()
 	}
@@ -121,6 +125,35 @@ func (sc *shardedCache) Flush() {
 	for _, v := range sc.cs {
 		v.Flush()
 	}
+}
+
+func (sc *shardedCache) SetDefault(k string, x interface{}) {
+	sc.Set(k, x, sc.cs[0].defaultExpiration)
+}
+
+func (sc *shardedCache) GetWithExpiration(k string) (interface{}, time.Time, bool) {
+	return sc.bucket(k).GetWithExpiration(k)
+}
+
+func (sc *shardedCache) Items() map[string]common.IItem {
+	itemsv := sc.items()
+	res := make(map[string]common.IItem)
+
+	for _, items := range itemsv {
+		for k, v := range items {
+			res[k] = v
+		}
+	}
+
+	return res
+}
+
+func (sc *shardedCache) ItemCount() int {
+	var i int32 = 0
+	for _, v := range sc.cs {
+		atomic.AddInt32(&i, int32(len(v.items)))
+	}
+	return int(i)
 }
 
 type shardedJanitor struct {
